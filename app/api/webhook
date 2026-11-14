@@ -1,0 +1,48 @@
+import { NextResponse } from 'next/server';
+import { Resend } from 'resend';
+import Stripe from 'stripe';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY);
+const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+export async function POST(req) {
+  const body = await req.text();
+  const sig = req.headers.get('stripe-signature');
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(body, sig, endpointSecret);
+  } catch (err) {
+    return NextResponse.json({ error: Webhook Error: ${err.message} }, { status: 400 });
+  }
+
+  // पेमेन्ट सफल भएपछि इमेल पठाउने
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+    const customerEmail = session.customer_details?.email;
+    const customerName = session.customer_details?.name;
+    const amountTotal = session.amount_total;
+
+    try {
+      await resend.emails.send({
+        from: 'K & K Halal Mart <onboarding@resend.dev>',
+        to: 'luitelkrishnahari4705@yahoo.com',
+        subject: '🎉 बधाई छ! नयाँ अर्डर आयो!',
+        html: `
+          <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+            <h2 style="color: #2e7d32;">K & K Halal Mart - नयाँ अर्डर प्राप्त भयो!</h2>
+            <p><b>ग्राहकको नाम:</b> ${customerName || 'उपलब्ध छैन'}</p>
+            <p><b>ग्राहकको इमेल:</b> ${customerEmail || 'उपलब्ध छैन'}</p>
+            <p><b>भुक्तानी रकम:</b> ¥${amountTotal}</p>
+            <p style="color: #555; margin-top: 20px;">कृपया Stripe ड्यासबोर्डमा गएर अर्डर तथा डेलिभरी ठेगाना चेक गर्नुहोस्।</p>
+          </div>
+        `
+      });
+    } catch (error) {
+      console.error('Email sending failed:', error);
+    }
+  }
+
+  return NextResponse.json({ received: true });
+}
