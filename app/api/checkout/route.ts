@@ -22,13 +22,7 @@ export async function POST(req: Request) {
       quantity: item.quantity || item.qty || item.count || 1,
     }));
 
-   
-
-    return NextResponse.json({ url: session.url });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
-}const session = await stripe.checkout.sessions.create({
+    const session = await stripe.checkout.sessions.create({
       line_items: lineItems,
       shipping_address_collection: {
         allowed_countries: ['JP'],
@@ -40,3 +34,9 @@ export async function POST(req: Request) {
       success_url: `${req.headers.get('origin')}/success`,
       cancel_url: `${req.headers.get('origin')}/?canceled=true`,
     });
+
+    return NextResponse.json({ url: session.url });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
