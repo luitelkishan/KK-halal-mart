@@ -1,15 +1,11 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export async function POST(req: Request) {
   try {
     const { items } = await req.json();
-
-    if (!items || items.length === 0) {
-      return NextResponse.json({ error: 'कार्ट खाली छ' }, { status: 400 });
-    }
 
     const lineItems = items.map((item: any) => ({
       price_data: {
@@ -17,7 +13,7 @@ export async function POST(req: Request) {
         product_data: {
           name: item.name,
         },
-        unit_amount: item.price,
+        unit_amount: Math.round(item.price),
       },
       quantity: item.quantity || item.qty || item.count || 1,
     }));
@@ -30,6 +26,18 @@ export async function POST(req: Request) {
       phone_number_collection: {
         enabled: true,
       },
+      shipping_options: [
+        {
+          shipping_rate_data: {
+            type: 'fixed_amount',
+            fixed_amount: {
+              amount: 500, // डेलिभरी चार्ज (फ्री राख्न 0 लेख्नुहोला)
+              currency: 'jpy',
+            },
+            display_name: 'Standard Shipping in Japan',
+          },
+        },
+      ],
       mode: 'payment',
       success_url: `${req.headers.get('origin')}/success`,
       cancel_url: `${req.headers.get('origin')}/?canceled=true`,
@@ -37,6 +45,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ url: session.url });
   } catch (err: any) {
+    console.error('Stripe Error:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
