@@ -7,19 +7,31 @@ export async function POST(req: Request) {
   try {
     const { items } = await req.json();
 
-    const lineItems = items.map((item: any) => ({
+    // कार्टमा भएका सामानहरूको कुल रकम (Subtotal) हिसाब गर्ने
+    const subtotal = items.reduce(
+      (sum: number, item: any) => sum + item.price * item.quantity,
+      0
+    );
+
+    // ¥5,000 वा सोभन्दा बढी भए Free Shipping (0), नत्र ¥500
+    const isFreeShipping = subtotal >= 5000;
+
+    const line_items = items.map((item: any) => ({
       price_data: {
         currency: 'jpy',
         product_data: {
           name: item.name,
+          images: item.image ? [item.image] : [],
         },
-        unit_amount: Math.round(item.price),
+        unit_amount: item.price,
       },
-      quantity: item.quantity || item.qty || item.count || 1,
+      quantity: item.quantity,
     }));
 
     const session = await stripe.checkout.sessions.create({
-      line_items: lineItems,
+      payment_method_types: ['card'],
+      line_items,
+      mode: 'payment',
       shipping_address_collection: {
         allowed_countries: ['JP'],
       },
@@ -31,14 +43,15 @@ export async function POST(req: Request) {
           shipping_rate_data: {
             type: 'fixed_amount',
             fixed_amount: {
-              amount: 500, // डेलिभरी चार्ज (फ्री राख्न 0 लेख्नुहोला)
+              amount: isFreeShipping ? 0 : 500,
               currency: 'jpy',
             },
-            display_name: 'Standard Shipping in Japan',
+            display_name: isFreeShipping
+              ? 'Free Delivery (¥5,000+ Order)'
+              : 'Standard Delivery (Japan)',
           },
         },
       ],
-      mode: 'payment',
       success_url: `${req.headers.get('origin')}/success`,
       cancel_url: `${req.headers.get('origin')}/?canceled=true`,
     });
