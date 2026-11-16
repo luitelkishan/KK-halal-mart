@@ -1,9 +1,10 @@
-
 "use client";
 
 import { useState } from "react";
 
-export default function AdminDashboard() {
+export default AdminDashboard;
+
+function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("Dashboard");
 
   const menu = [
@@ -18,80 +19,44 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <main className="min-h-screen bg-gray-100">
-      <header className="bg-emerald-900 text-white p-5">
-        <h1 className="text-2xl font-bold">
-          K&K AI Business Control
-        </h1>
-        <p className="text-sm mt-1">
-          Halal Mart Management System
-        </p>
-      </header>
-
-      <div className="max-w-7xl mx-auto p-4">
-        <nav className="flex flex-wrap gap-2 mb-6">
+    <main className="min-h-screen bg-gray-100 flex">
+      {/* Sidebar */}
+      <aside className="w-64 bg-white shadow-md p-5 hidden md:block">
+        <h2 className="text-xl font-bold text-emerald-700 mb-6">K & K Admin</h2>
+        <ul>
           {menu.map((item) => (
-            <button
+            <li
               key={item}
               onClick={() => setActiveTab(item)}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold ${
+              className={`p-3 rounded-lg cursor-pointer mb-2 transition-colors ${
                 activeTab === item
-                  ? "bg-emerald-700 text-white"
-                  : "bg-white text-gray-700"
+                  ? "bg-emerald-600 text-white font-semibold"
+                  : "text-gray-700 hover:bg-gray-100"
               }`}
             >
               {item}
-            </button>
+            </li>
           ))}
-        </nav>
+        </ul>
+      </aside>
 
-        <h2 className="text-xl font-bold text-gray-800 mb-4">
-          {activeTab}
-        </h2>
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col">
+        <header className="bg-emerald-900 text-white p-5 shadow-sm">
+          <h1 className="text-2xl font-bold">K & K AI Business Control</h1>
+          <p className="text-sm mt-1 text-emerald-200">
+            Halal Mart Management System
+          </p>
+        </header>
 
-        {activeTab === "Dashboard" && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              ["Daily Sales", "¥0"],
-              ["Total Products", "0"],
-              ["Total Orders", "0"],
-              ["Customers", "0"],
-            ].map(([name, value]) => (
-              <div
-                key={name}
-                className="bg-white p-5 rounded-xl shadow-sm"
-              >
-                <p className="text-gray-500 text-sm">{name}</p>
-                <p className="text-2xl font-bold text-emerald-700 mt-2">
-                  {value}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {activeTab === "AI Assistant" && (
+        <div className="p-6">
           <div className="bg-white p-6 rounded-xl shadow-sm">
-            <h3 className="text-lg font-bold mb-2">
-              K&K AI Assistant
-            </h3>
+            <h2 className="text-xl font-bold text-gray-800 mb-4">{activeTab}</h2>
             <p className="text-gray-600">
-              Your AI Business Assistant is ready for development.
+              Welcome to the K & K Halal Mart management dashboard. Currently viewing: <span className="font-semibold text-emerald-600">{activeTab}</span>
             </p>
           </div>
-        )}
-
-        {activeTab !== "Dashboard" &&
-          activeTab !== "AI Assistant" && (
-            <div className="bg-white p-6 rounded-xl shadow-sm">
-              <p className="text-gray-600">
-                {activeTab} Management Module
-              </p>
-              <p className="text-sm text-gray-400 mt-2">
-                This module will be connected in the next stages.
-              </p>
-            </div>
-          )}
+        </div>
       </div>
     </main>
   );
