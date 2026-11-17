@@ -7,9 +7,13 @@ export async function POST(req: Request) {
   try {
     const { items } = await req.json();
 
+    if (!items || items.length === 0) {
+      return NextResponse.json({ error: 'Cart is empty' }, { status: 400 });
+    }
+
     // कार्टमा भएका सामानहरूको कुल रकम (Subtotal) हिसाब गर्ने
     const subtotal = items.reduce(
-      (sum: number, item: any) => sum + item.price * item.quantity,
+      (sum: number, item: any) => sum + Number(item.price) * Number(item.quantity),
       0
     );
 
@@ -21,15 +25,15 @@ export async function POST(req: Request) {
         currency: 'jpy',
         product_data: {
           name: item.name,
-          images: item.image ? [item.image] : [],
         },
-        unit_amount: item.price,
+        unit_amount: Math.round(Number(item.price)),
       },
-      quantity: item.quantity,
+      quantity: Number(item.quantity),
     }));
 
+    const origin = req.headers.get('origin') || 'https://kk-halal-mart.vercel.app';
+
     const session = await stripe.checkout.sessions.create({
-     
       line_items,
       mode: 'payment',
       shipping_address_collection: {
@@ -52,13 +56,16 @@ export async function POST(req: Request) {
           },
         },
       ],
-      success_url: `${req.headers.get('origin')}/success`,
-      cancel_url: `${req.headers.get('origin')}/?canceled=true`,
+      success_url: `${origin}/success`,
+      cancel_url: `${origin}/?canceled=true`,
     });
 
     return NextResponse.json({ url: session.url });
   } catch (err: any) {
     console.error('Stripe Error:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json(
+      { error: err.message || 'Payment session failed' },
+      { status: 500 }
+    );
   }
 }
