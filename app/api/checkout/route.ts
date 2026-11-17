@@ -7,30 +7,34 @@ export async function POST(req: Request) {
   try {
     const { items } = await req.json();
 
-    if (!items || items.length === 0) {
+    if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: 'Cart is empty' }, { status: 400 });
     }
 
-    // कार्टमा भएका सामानहरूको कुल रकम (Subtotal) हिसाब गर्ने
-    const subtotal = items.reduce(
-      (sum: number, item: any) => sum + Number(item.price) * Number(item.quantity),
+    // कार्टका सामानहरूको मूल्य र मात्रालाई सुरक्षित रूपमा नम्बरमा कन्भर्ट गर्ने
+    const line_items = items.map((item: any) => {
+      const unitAmount = Math.round(Number(item.price) || 0);
+      const qty = Number(item.quantity) || 1;
+
+      return {
+        price_data: {
+          currency: 'jpy',
+          product_data: {
+            name: item.name || 'Halal Item',
+          },
+          unit_amount: unitAmount,
+        },
+        quantity: qty,
+      };
+    });
+
+    // कुल रकम हिसाब गर्ने
+    const subtotal = line_items.reduce(
+      (sum, item) => sum + item.price_data.unit_amount * item.quantity,
       0
     );
 
-    // ¥5,000 वा सोभन्दा बढी भए Free Shipping (0), नत्र ¥500
     const isFreeShipping = subtotal >= 5000;
-
-    const line_items = items.map((item: any) => ({
-      price_data: {
-        currency: 'jpy',
-        product_data: {
-          name: item.name,
-        },
-        unit_amount: Math.round(Number(item.price)),
-      },
-      quantity: Number(item.quantity),
-    }));
-
     const origin = req.headers.get('origin') || 'https://kk-halal-mart.vercel.app';
 
     const session = await stripe.checkout.sessions.create({
