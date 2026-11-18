@@ -3,21 +3,57 @@
 import { useState } from "react";
 import { products, Product } from "./data/products";
 
+interface CartItem extends Product {
+  quantity: number;
+}
+
 export default function HomePage() {
-  const [cart, setCart] = useState<Product[]>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [activeTab, setActiveTab] = useState("Home");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+
+  const [deliveryDate, setDeliveryDate] = useState("");
+  const [deliveryTime, setDeliveryTime] = useState("Anytime (कुनै पनि समय)");
+  const [customerNote, setCustomerNote] = useState("");
 
   const addToCart = (product: Product) => {
-    setCart([...cart, product]);
+    setCart((prev) => {
+      const existing = prev.find((item) => item.id === product.id);
+      if (existing) {
+        return prev.map((item) =>
+          item.id === product.id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        );
+      }
+      return [...prev, { ...product, quantity: 1 }];
+    });
   };
+
+  const updateQuantity = (id: number | string, delta: number) => {
+    setCart((prev) =>
+      prev
+        .map((item) =>
+          item.id === id ? { ...item, quantity: item.quantity + delta } : item
+        )
+        .filter((item) => item.quantity > 0)
+    );
+  };
+
+  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const subtotal = cart.reduce(
+    (sum, item) => sum + Number(item.price) * item.quantity,
+    0
+  );
+  const freeShippingRemaining = Math.max(0, 5000 - subtotal);
 
   const handleCheckout = async () => {
     if (cart.length === 0) {
-      alert("तपाईको कार्ट खाली छ! पहिले सामान छान्नुहोस्।");
+      alert("तपाईंको कार्ट खाली छ! पहिले सामान छान्नुहोस्।");
       return;
     }
 
@@ -26,7 +62,12 @@ export default function HomePage() {
       const response = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: cart }),
+        body: JSON.stringify({
+          items: cart,
+          deliveryDate,
+          deliveryTime,
+          customerNote,
+        }),
       });
 
       const data = await response.json();
@@ -56,8 +97,9 @@ export default function HomePage() {
   const recommendedProducts = products.slice(0, 6);
   const highDemandProducts = products.slice(6, 12);
     return (
-    <main className="min-h-screen bg-gray-50 pb-24">
-           <header className="sticky top-0 z-50 bg-white shadow-sm px-4 py-3 flex items-center gap-3 border-b border-gray-100">
+    <main className="min-h-screen bg-gray-50 pb-24 relative">
+      {/* Header */}
+      <header className="sticky top-0 z-40 bg-white shadow-sm px-4 py-3 flex items-center gap-3 border-b border-gray-100">
         <button
           onClick={() => setIsSidebarOpen(true)}
           className="text-2xl text-gray-700 p-1 hover:bg-gray-100 rounded-lg cursor-pointer"
@@ -77,18 +119,19 @@ export default function HomePage() {
         </div>
 
         <button
-          onClick={handleCheckout}
-          className="relative p-2 text-gray-700 hover:bg-gray-100 rounded-full"
+          onClick={() => setIsCartOpen(true)}
+          className="relative p-2 text-gray-700 hover:bg-gray-100 rounded-full cursor-pointer"
         >
-          <span className="text-xl">🔔</span>
-          {cart.length > 0 && (
-            <span className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-              {cart.length}
+          <span className="text-xl">🛒</span>
+          {totalItems > 0 && (
+            <span className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
+              {totalItems}
             </span>
           )}
         </button>
       </header>
 
+      {/* Main Content */}
       <div className="max-w-7xl mx-auto">
         {!searchQuery && selectedCategory === "All" && (
           <div className="w-full bg-white flex justify-center border-b border-gray-200">
@@ -100,6 +143,7 @@ export default function HomePage() {
           </div>
         )}
 
+        {/* Categories */}
         <section className="bg-white py-4 px-4 mt-2 shadow-sm">
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-lg font-bold text-gray-800">Categories</h2>
@@ -134,7 +178,7 @@ export default function HomePage() {
             ))}
           </div>
         </section>
-
+                {/* Recommended & High Demand */}
         {!searchQuery && selectedCategory === "All" && (
           <>
             <section className="py-4 px-4">
@@ -157,7 +201,7 @@ export default function HomePage() {
                       <span className="text-sm font-bold text-red-600">¥{product.price}</span>
                       <button
                         onClick={() => addToCart(product)}
-                        className="w-8 h-8 rounded-lg border border-blue-200 bg-blue-50 text-blue-600 flex items-center justify-center"
+                        className="w-8 h-8 rounded-lg border border-blue-200 bg-blue-50 text-blue-600 flex items-center justify-center active:scale-95 transition"
                       >
                         🛒
                       </button>
@@ -187,7 +231,7 @@ export default function HomePage() {
                       <span className="text-sm font-bold text-red-600">¥{product.price}</span>
                       <button
                         onClick={() => addToCart(product)}
-                        className="w-8 h-8 rounded-lg border border-blue-200 bg-blue-50 text-blue-600 flex items-center justify-center"
+                        className="w-8 h-8 rounded-lg border border-blue-200 bg-blue-50 text-blue-600 flex items-center justify-center active:scale-95 transition"
                       >
                         🛒
                       </button>
@@ -198,18 +242,19 @@ export default function HomePage() {
             </section>
           </>
         )}
-                <section id="all-products" className="px-4 py-6">
+
+        {/* All Products */}
+        <section id="all-products" className="px-4 py-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-bold text-gray-800">
               {selectedCategory === "All" ? "सबै उत्पादनहरू" : selectedCategory} ({filteredProducts.length})
             </h2>
-            {cart.length > 0 && (
+            {totalItems > 0 && (
               <button
-                onClick={handleCheckout}
-                disabled={loading}
-                className="bg-emerald-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow"
+                onClick={() => setIsCartOpen(true)}
+                className="bg-emerald-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow hover:bg-emerald-700"
               >
-                {loading ? "Loading..." : `Pay Now (${cart.length})`}
+                View Cart ({totalItems}) • ¥{subtotal}
               </button>
             )}
           </div>
@@ -233,7 +278,7 @@ export default function HomePage() {
                   <span className="text-sm font-bold text-red-600">¥{product.price}</span>
                   <button
                     onClick={() => addToCart(product)}
-                    className="w-8 h-8 rounded-lg border border-blue-200 bg-blue-50 text-blue-600 flex items-center justify-center"
+                    className="w-8 h-8 rounded-lg border border-blue-200 bg-blue-50 text-blue-600 flex items-center justify-center active:scale-95 transition"
                   >
                     🛒
                   </button>
@@ -243,8 +288,222 @@ export default function HomePage() {
           </div>
         </section>
       </div>
+            {/* Floating Customer Support Button */}
+      <a
+        href="https://line.me/ti/p/"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-20 right-4 z-40 bg-[#06C755] text-white px-3.5 py-2.5 rounded-full shadow-lg flex items-center gap-1.5 text-xs font-bold hover:opacity-90 transition"
+      >
+        <span>💬</span>
+        <span>LINE Support</span>
+      </a>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 px-6 py-2 flex justify-between items-center shadow-lg">
+      {/* Left Sidebar Drawer */}
+      {isSidebarOpen && (
+        <div className="fixed inset-0 z-50 flex">
+          <div
+            className="fixed inset-0 bg-black/50"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+          <div className="relative w-72 bg-white h-full shadow-xl p-5 flex flex-col justify-between z-10">
+            <div>
+              <div className="flex justify-between items-center border-b pb-3 mb-4">
+                <h2 className="text-lg font-bold text-emerald-700">K & K Halal Mart</h2>
+                <button
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="text-gray-500 text-xl font-bold"
+                >
+                  ✕
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 mb-3">Categories</p>
+              <ul className="space-y-2">
+                {categories.map((cat) => (
+                  <li key={cat}>
+                    <button
+                      onClick={() => {
+                        setSelectedCategory(cat);
+                        setIsSidebarOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium ${
+                        selectedCategory === cat
+                          ? "bg-emerald-50 text-emerald-700 font-bold"
+                          : "text-gray-700 hover:bg-gray-100"
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="border-t pt-3 text-xs text-gray-500">
+              <p>🚚 ¥5,000+ अर्डरमा फ्री डेलिभरी</p>
+              <p className="mt-1">🇯🇵 All Japan Delivery</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Right Cart & Delivery Slot Drawer */}
+      {isCartOpen && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <div
+            className="fixed inset-0 bg-black/50"
+            onClick={() => setIsCartOpen(false)}
+          />
+          <div className="relative w-full max-w-md bg-white h-full shadow-2xl flex flex-col justify-between z-10 overflow-y-auto">
+            <div className="p-4 border-b flex justify-between items-center sticky top-0 bg-white z-20">
+              <h2 className="text-lg font-bold text-gray-800">
+                तपाईंको कार्ट ({totalItems})
+              </h2>
+              <button
+                onClick={() => setIsCartOpen(false)}
+                className="text-gray-500 text-xl font-bold p-1"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-4 flex-1 space-y-4">
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-800">
+                {freeShippingRemaining > 0 ? (
+                  <p>
+                    फ्री डेलिभरीको लागि अझै{" "}
+                    <span className="font-bold">¥{freeShippingRemaining}</span> को सामान थप्नुहोस्!
+                  </p>
+                ) : (
+                  <p className="font-bold">🎉 बधाई छ! तपाईंले Free Delivery पाउनुभयो!</p>
+                )}
+              </div>
+
+              {cart.length === 0 ? (
+                <div className="text-center py-12 text-gray-400">
+                  <p className="text-4xl mb-2">🛒</p>
+                  <p className="text-sm">तपाईंको कार्ट खाली छ।</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {cart.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-100"
+                    >
+                      <div className="flex-1 pr-2">
+                        <h4 className="text-sm font-semibold text-gray-800 line-clamp-1">
+                          {item.name}
+                        </h4>
+                        <p className="text-xs font-bold text-red-600 mt-0.5">
+                          ¥{item.price} × {item.quantity} = ¥{Number(item.price) * item.quantity}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => updateQuantity(item.id, -1)}
+                          className="w-7 h-7 rounded-full bg-white border text-gray-700 font-bold"
+                        >
+                          -
+                        </button>
+                        <span className="text-sm font-bold w-5 text-center">
+                          {item.quantity}
+                        </span>
+                        <button
+                          onClick={() => updateQuantity(item.id, 1)}
+                          className="w-7 h-7 rounded-full bg-emerald-600 text-white font-bold"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+                            {cart.length > 0 && (
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-3 mt-4">
+                  <h3 className="text-sm font-bold text-gray-800">
+                    🚚 डेलिभरी मिति र समय छान्नुहोस्
+                  </h3>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      डेलिभरी मिति (Delivery Date)
+                    </label>
+                    <input
+                      type="date"
+                      value={deliveryDate}
+                      onChange={(e) => setDeliveryDate(e.target.value)}
+                      className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      डेलिभरी समय (Time Slot)
+                    </label>
+                    <select
+                      value={deliveryTime}
+                      onChange={(e) => setDeliveryTime(e.target.value)}
+                      className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800"
+                    >
+                      <option value="Anytime (कुनै पनि समय)">Anytime (कुनै पनि समय)</option>
+                      <option value="Morning (बिहान 12:00 सम्म)">Morning (बिहान 12:00 सम्म)</option>
+                      <option value="14:00 - 16:00">14:00 - 16:00</option>
+                      <option value="16:00 - 18:00">16:00 - 18:00</option>
+                      <option value="18:00 - 20:00">18:00 - 20:00</option>
+                      <option value="19:00 - 21:00">19:00 - 21:00</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      विशेष नोट (Optional Note)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="जस्तै: ढोका बाहिर राखिदिनुहोला..."
+                      value={customerNote}
+                      onChange={(e) => setCustomerNote(e.target.value)}
+                      className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {cart.length > 0 && (
+              <div className="p-4 border-t bg-white sticky bottom-0 space-y-3">
+                <div className="flex justify-between text-sm text-gray-600">
+                  <span>सामानको जम्मा (Subtotal)</span>
+                  <span className="font-bold text-gray-800">¥{subtotal}</span>
+                </div>
+                <div className="flex justify-between text-sm text-gray-600">
+                  <span>डेलिभरी शुल्क (Delivery)</span>
+                  <span className="font-bold text-emerald-600">
+                    {subtotal >= 5000 ? "FREE (¥0)" : "¥500"}
+                  </span>
+                </div>
+                <div className="flex justify-between text-base font-bold text-gray-900 border-t pt-2">
+                  <span>कुल जम्मा (Total)</span>
+                  <span className="text-red-600">
+                    ¥{subtotal >= 5000 ? subtotal : subtotal + 500}
+                  </span>
+                </div>
+
+                <button
+                  onClick={handleCheckout}
+                  disabled={loading}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl shadow-md transition disabled:opacity-50"
+                >
+                  {loading ? "भुक्तानी खुल्दैछ..." : "Proceed to Checkout (Card / Konbini)"}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 px-6 py-2 flex justify-around items-center shadow-lg">
         <button
           onClick={() => {
             setActiveTab("Home");
@@ -252,133 +511,35 @@ export default function HomePage() {
             setSearchQuery("");
             window.scrollTo({ top: 0, behavior: "smooth" });
           }}
-          className={`flex flex-col items-center text-xs font-medium ${activeTab === "Home" ? "text-blue-700 font-bold" : "text-gray-500"}`}
+          className={`flex flex-col items-center text-xs ${
+            activeTab === "Home" ? "text-emerald-600 font-bold" : "text-gray-500"
+          }`}
         >
-          <span className="text-xl mb-0.5">🏠</span>
-          Home
+          <span className="text-lg">🏠</span>
+          <span>Home</span>
         </button>
 
         <button
-          onClick={handleCheckout}
-          className="relative flex flex-col items-center text-xs font-medium text-gray-600"
+          onClick={() => {
+            setActiveTab("Categories");
+            setIsSidebarOpen(true);
+          }}
+          className={`flex flex-col items-center text-xs ${
+            activeTab === "Categories" ? "text-emerald-600 font-bold" : "text-gray-500"
+          }`}
         >
-          <span className="text-xl mb-0.5">🛒</span>
-          <span>Cart ({cart.length})</span>
+          <span className="text-lg">📂</span>
+          <span>Categories</span>
         </button>
 
         <button
-          onClick={() => alert("K & K Halal Mart")}
-          className="flex flex-col items-center text-xs font-medium text-gray-500"
+          onClick={() => setIsCartOpen(true)}
+          className="relative flex flex-col items-center text-xs text-gray-500"
         >
-          <span className="text-xl mb-0.5">👤</span>
-          Profile
+          <span className="text-lg">🛒</span>
+          <span>Cart ({totalItems})</span>
         </button>
       </nav>
-            {/* Sidebar / Drawer */}
-      {isSidebarOpen && (
-        <div className="fixed inset-0 z-50 flex">
-          {/* बाहिर कालो वा ब्याక్‌ग्राउन्ड ब्लर गर्ने */}
-          <div 
-            className="fixed inset-0 bg-black/50" 
-            onClick={() => setIsSidebarOpen(false)}
-          ></div>
-
-          {/* साइड मेनुको बक्स */}
-          <div className="relative w-80 max-w-[80%] bg-white h-full shadow-xl z-10 flex flex-col overflow-y-auto">
-            {/* माथिल्लो Profile / Login खण्ड */}
-            <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-xl text-gray-500">
-                  👤
-                </div>
-                <div>
-                  <span className="text-sm font-bold text-gray-800">Login | Register</span>
-                </div>
-              </div>
-              <button 
-                onClick={() => setIsSidebarOpen(false)}
-                className="text-gray-500 text-xl font-bold p-1"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* मेनु लिस्टहरू */}
-                       <div className="flex-1 py-2">
-              {[
-                { 
-                  icon: "🏪", 
-                  title: "Change Shop", 
-                  action: () => {
-                    const shop = prompt("Enter new shop name/location:", "K & K Halal Mart - Tokyo");
-                    if (shop) alert(`Shop changed to: ${shop}`);
-                  } 
-                },
-                { 
-                  icon: "🌐", 
-                  title: "Change Language", 
-                  action: () => {
-                    const lang = prompt("Select language (Nepali / English / Japanese):", "Nepali");
-                    if (lang) alert(`Language changed to ${lang}`);
-                  } 
-                },
-                { 
-                  icon: "🏳️", 
-                  title: "Change Country/Community", 
-                  action: () => alert("Community settings updated.") 
-                },
-                { 
-                  icon: "💬", 
-                  title: "Contact Us", 
-                  action: () => alert("Phone: 090-0000-0000 \nEmail: support@kkhalalmart.com") 
-                },
-                { 
-                  icon: "❓", 
-                  title: "FAQ", 
-                  action: () => alert("FAQ: You can order halal items online for home delivery across Japan.") 
-                },
-                { 
-                  icon: "🛡️", 
-                  title: "User Guide", 
-                  action: () => alert("User Guide: Browse products -> Add to Cart -> Click Checkout to pay via Stripe.") 
-                },
-                { 
-                  icon: "📰", 
-                  title: "Blogs", 
-                  action: () => alert("No blogs available right now.") 
-                },
-                { 
-                  icon: "🔒", 
-                  title: "Policies", 
-                  action: () => alert("Privacy Policy & Terms of Service: All rights reserved by K & K Halal Mart.") 
-                },
-                { 
-                  icon: "ℹ️", 
-                  title: "App Information", 
-                  action: () => alert("K & K Halal Mart PWA \nVersion: 1.0.0 \nBuilt with Next.js") 
-                },
-                { 
-                  icon: "⭐", 
-                  title: "Rate Us", 
-                  action: () => alert("Thank you! Your feedback helps us improve our service.") 
-                },
-              ].map((item, index) => (
-                <button
-                  key={index}
-                  onClick={() => {
-                    item.action();
-                    setIsSidebarOpen(false);
-                  }}
-                  className="w-full flex items-center gap-4 px-6 py-3.5 hover:bg-gray-50 text-left text-gray-700 text-sm border-b border-gray-50 transition"
-                >
-                  <span className="text-xl">{item.icon}</span>
-                  <span className="font-medium">{item.title}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
     </main>
   );
 }

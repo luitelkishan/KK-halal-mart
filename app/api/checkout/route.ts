@@ -5,13 +5,12 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export async function POST(req: Request) {
   try {
-    const { items } = await req.json();
+    const { items, deliveryDate, deliveryTime, customerNote } = await req.json();
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: 'Cart is empty' }, { status: 400 });
     }
 
-    // कार्टका सामानहरूको मूल्य र मात्रालाई सुरक्षित रूपमा नम्बरमा कन्भर्ट गर्ने
     const line_items = items.map((item: any) => {
       const unitAmount = Math.round(Number(item.price) || 0);
       const qty = Number(item.quantity) || 1;
@@ -28,7 +27,6 @@ export async function POST(req: Request) {
       };
     });
 
-    // कुल रकम हिसाब गर्ने
     const subtotal = line_items.reduce(
       (sum, item) => sum + item.price_data.unit_amount * item.quantity,
       0
@@ -45,6 +43,11 @@ export async function POST(req: Request) {
       },
       phone_number_collection: {
         enabled: true,
+      },
+      metadata: {
+        delivery_date: deliveryDate || 'Anytime',
+        delivery_time: deliveryTime || 'Anytime',
+        customer_note: customerNote || 'None',
       },
       shipping_options: [
         {
