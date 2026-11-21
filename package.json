@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@stripe/stripe-js": "^10.2.1",
+    "@supabase/supabase-js": "^2.119.2",
     "lucide-react": "^1.70.0",
     "next": "16.4.5",
     "react": "19.3.0",
