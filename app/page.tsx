@@ -20,7 +20,6 @@ export default function HomePage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
-const [loading, setLoading] = useState(true);
 
 useEffect(() => {
   const fetchProducts = async () => {
