@@ -19,6 +19,25 @@ interface CartItem extends Product {
 export default function HomePage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+const [loading, setLoading] = useState(true);
+
+useEffect(() => {
+  const fetchProducts = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("products")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (!error && data) {
+      setProducts(data);
+    }
+    setLoading(false);
+  };
+
+  fetchProducts();
+}, []);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [activeTab, setActiveTab] = useState("Home");
@@ -28,7 +47,24 @@ export default function HomePage() {
   const [deliveryDate, setDeliveryDate] = useState("");
   const [deliveryTime, setDeliveryTime] = useState("Anytime (कुनै पनि समय)");
   const [customerNote, setCustomerNote] = useState("");
+useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .order("created_at", { ascending: false });
 
+      if (error) {
+        console.error("Error fetching products:", error);
+      } else if (data) {
+        setProducts(data);
+      }
+      setLoading(false);
+    };
+
+    fetchProducts();
+  }, []);
   const addToCart = (product: Product) => {
     setCart((prev) => {
       const existing = prev.find((item) => item.id === product.id);
