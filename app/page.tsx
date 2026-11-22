@@ -1,7 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { products, Product } from "./data/products";
+import { useEffect, useState } from "react";
+import { supabase } from "../lib/supabase";
+
+interface Product {
+  id: string | number;
+  name: string;
+  price: number;
+  category: string;
+  image_url?: string | null;
+  in_stock?: boolean;
+}
 
 interface CartItem extends Product {
   quantity: number;
