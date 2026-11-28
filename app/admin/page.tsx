@@ -317,7 +317,22 @@ const updateStock = async (item: Product, nextStock: number) => {
                     </button>
                     <p className="text-xs font-medium text-gray-700 mt-0.5">
   स्टक: <strong>{item.stock ?? 0}</strong> पिस
-</p>
+<div className="flex items-center gap-1">
+  <button
+    type="button"
+    onClick={() => updateStock(item, (item.stock ?? 0) - 1)}
+    className="px-2 py-1 rounded-lg text-xs font-bold bg-gray-200 text-gray-800"
+  >
+    -
+  </button>
+  <button
+    type="button"
+    onClick={() => updateStock(item, (item.stock ?? 0) + 1)}
+    className="px-2 py-1 rounded-lg text-xs font-bold bg-blue-100 text-blue-800"
+  >
+    +
+  </button>
+</div>
                     <button
                       onClick={() => deleteProduct(item.id)}
                       className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-50 text-red-600"
