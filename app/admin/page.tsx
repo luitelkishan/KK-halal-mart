@@ -111,7 +111,17 @@ export default function AdminPage() {
       .eq("id", item.id);
     fetchAllData();
   };
-
+onst updateStock = async (item: Product, nextStock: number) => {
+  const safeStock = Math.max(0, nextStock);
+  await supabase
+    .from("products")
+    .update({
+      stock: safeStock,
+      in_stock: safeStock > 0,
+    })
+    .eq("id", item.id);
+  fetchAllData();
+};
   const deleteProduct = async (id: string) => {
     await supabase.from("products").delete().eq("id", id);
     fetchAllData();
@@ -287,6 +297,9 @@ export default function AdminPage() {
                       <p className="font-semibold text-gray-900 truncate">{item.name}</p>
                       <p className="text-sm text-gray-500">{item.category}</p>
                       <p className="text-sm font-bold text-green-700">¥{item.price}</p>
+                      <p className="text-xs font-medium text-gray-700 mt-0.5">
+  स्टक: <strong>{item.stock ?? 0}</strong> पिस
+</p>
                     </div>
                   </div>
 
@@ -301,6 +314,9 @@ export default function AdminPage() {
                     >
                       {item.in_stock ? "In Stock" : "Out of Stock"}
                     </button>
+                    <p className="text-xs font-medium text-gray-700 mt-0.5">
+  स्टक: <strong>{item.stock ?? 0}</strong> पिस
+</p>
                     <button
                       onClick={() => deleteProduct(item.id)}
                       className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-50 text-red-600"
