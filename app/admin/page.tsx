@@ -111,7 +111,7 @@ export default function AdminPage() {
       .eq("id", item.id);
     fetchAllData();
   };
-onst updateStock = async (item: Product, nextStock: number) => {
+const updateStock = async (item: Product, nextStock: number) => {
   const safeStock = Math.max(0, nextStock);
   await supabase
     .from("products")
