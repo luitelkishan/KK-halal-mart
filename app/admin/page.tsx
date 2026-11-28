@@ -10,6 +10,7 @@ interface Product {
   category: string;
   image_url: string;
   in_stock: boolean;
+  stock?: number;
 }
 
 interface Order {
